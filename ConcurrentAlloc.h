@@ -5,41 +5,46 @@
 #include"ThreadCache.h"
 #include"PageCache.h"
 
+//ç”³è¯·å†…å­˜
 static void* ConcurrentAlloc(size_t size)
 {
-	// ÉêÇëµÄÄÚ´æ´óÓÚ64K,¾ÍÖ±½Óµ½PageCacheÖĞÉêÇëÄÚ´æ
+	// ç”³è¯·çš„å†…å­˜å¤§äº64K,å°±ç›´æ¥åˆ°PageCacheä¸­ç”³è¯·å†…å­˜
 	if (size > MAXBYTES)
 	{
+		//æŒ‰ç…§é¡µçš„å¤§å°è¿›è¡Œå¯¹é½ï¼Œè®¡ç®—å‡ºç”³è¯·çš„é¡µçš„ä¸ªæ•°1é¡µæ˜¯4k
 		size_t roundsize = ClassSize::_Roundup(size, 1 << PAGE_SHIFT);
 		size_t npage = roundsize >> PAGE_SHIFT;
-
+		//è·å¾—spanå¯¹è±¡
 		Span* span = PageCache::GetInstance()->NewSpan(npage);
 		void* ptr = (void*)(span->_pageid << PAGE_SHIFT);
+		
 		return ptr;
 	}
-	else//64kÒÔÄÚÍ¨¹ıthreadcacheÄÚÉêÇë
+	else//64kä»¥å†…é€šè¿‡threadcacheå†…ç”³è¯·
 	{
-		// Í¨¹ıtls£¬»ñÈ¡Ïß³Ì×Ô¼ºµÄthreadcache
+		// é€šè¿‡tlsï¼Œè·å–çº¿ç¨‹è‡ªå·±çš„threadcache
 		if (tls_threadcache == nullptr)
 		{
 			tls_threadcache = new ThreadCache;
 			//cout << std::this_thread::get_id() << "->" << tls_threadcache << endl;
 		}
+		//è¿”å›è·å–çš„å†…å­˜å—çš„åœ°å€
 		return tls_threadcache->Allocate(size);
 		//return nullptr;
 	}
 }
 
 
-
+//é‡Šæ”¾å†…å­˜
 static void ConcurrentFree(void* ptr)
 {
+	//è·å–é¡µå·åˆ°spançš„æ˜ å°„
 	Span* span = PageCache::GetInstance()->MapObjectToSpan(ptr);
 	size_t size = span->_objsize;
 	if (size > MAXBYTES)
 	{
-		//ÉêÇë´óÓÚ64k, Ö±½ÓÈ¥PageCache, ´óĞ¡¼ÇÂ¼ÔÚobjsize
-		//ÊÍ·Å´óÓÚ64kµÄÄÚ´æ£¬Ö±½Ó¹é»¹¸øPageCache,objsizeÖĞ´æ×Å´óĞ¡
+		//ç”³è¯·å¤§äº64k, ç›´æ¥å»PageCache, å¤§å°è®°å½•åœ¨objsize
+		//é‡Šæ”¾å¤§äº64kçš„å†…å­˜ï¼Œç›´æ¥å½’è¿˜ç»™PageCache,objsizeä¸­å­˜ç€å¤§å°
 		PageCache::GetInstance()->ReleaseSpanToPageCahce(span);
 	}
 	else
