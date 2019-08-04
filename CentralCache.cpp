@@ -3,11 +3,32 @@
 
 CentralCache CentralCache::_inst;
 
-//// ´ò×®²âÊÔ//// ´ÓÖĞĞÄ»º´æ»ñÈ¡Ò»¶¨ÊıÁ¿µÄ¶ÔÏó¸øthread cache//size_t CentralCache::FetchRangeObj(void*& start, void*& end, size_t n, size_t bytes)//{//	start = malloc(bytes * n);//	end = (char*)start + bytes*(n-1);////	void* cur = start;//	while (cur <= end)//	{//		void* next = (char*)cur + bytes;//		NEXT_OBJ(cur) = next;//		//		cur = next;//	}////	NEXT_OBJ(end) = nullptr;////	return n;//}
+//// æ‰“æ¡©æµ‹è¯•
+//// ä»ä¸­å¿ƒç¼“å­˜è·å–ä¸€å®šæ•°é‡çš„å¯¹è±¡ç»™thread cache
+//size_t CentralCache::FetchRangeObj(void*& start, void*& end, size_t n, size_t bytes)
+//{
+//	start = malloc(bytes * n);
+//	end = (char*)start + bytes*(n-1);
+//
+//	void* cur = start;
+//	while (cur <= end)
+//	{
+//		void* next = (char*)cur + bytes;
+//		NEXT_OBJ(cur) = next;
+//		
+//		cur = next;
+//	}
+//
+//	NEXT_OBJ(end) = nullptr;
+//
+//	return n;
+//}
 
+
+// å½“Central Cacheä¸­å­˜åœ¨spançš„æ—¶å€™ï¼Œç›´æ¥è¿”å›span,å¦åˆ™è¦åˆ°PageCacheä¸­è·å–span
 Span* CentralCache::GetOneSpan(SpanList* spanlist, size_t bytes)
 {
-	//CentralCacheÖĞ´æÔÚspan
+	//CentralCacheä¸­å­˜åœ¨span
 	Span* span = spanlist->begin();
 	while (span != spanlist->end())
 	{
@@ -17,14 +38,17 @@ Span* CentralCache::GetOneSpan(SpanList* spanlist, size_t bytes)
 		span = span->_next;
 	}
 
-	// CetralCacheÖĞÎŞspan,ÏòpagecacheÉêÇëÒ»¸öĞÂµÄºÏÊÊ´óĞ¡µÄspan,¼ÆËãÒ³ºÅ£¬ĞÂµÄspanÓĞnpageÒ³
+	// CetralCacheä¸­æ— span,å‘pagecacheç”³è¯·ä¸€ä¸ªæ–°çš„åˆé€‚å¤§å°çš„span,è®¡ç®—é¡µå·ï¼Œæ–°çš„spanæœ‰npageé¡µ
 	size_t npage = ClassSize::NumMovePage(bytes);
 	Span* newspan = PageCache::GetInstance()->NewSpan(npage);
 
-	// ½«spanµÄÄÚ´æÇĞ¸î³ÉÒ»¸ö¸öbytes´óĞ¡µÄ¶ÔÏó¹ÒÆğÀ´
+	// è·å–åˆ°äº†newSpanä¹‹åï¼Œè¿™ä¸ªnewSpanæ˜¯npageæ•°é‡çš„é¡µ
+	// éœ€è¦å°†è¿™ä¸ªspanåˆ†å‰²æˆä¸€ä¸ªä¸ªçš„byteså¤§å°çš„å†…å­˜å—è¿æ¥èµ·æ¥
+	// åœ°å€è®¾ç½®ä¸ºchar*æ˜¯ä¸ºäº†ä¸€ä¼šå„¿å¯ä»¥æ–¹ä¾¿çš„æŒ‚é“¾ï¼Œæ¯æ¬¡åŠ æ•°å­—çš„æ—¶å€™ï¼Œå¯ä»¥ç›´æ¥ç§»åŠ¨è¿™ä¹ˆå¤šçš„å­—èŠ‚
 	char* start = (char*)(newspan->_pageid << PAGE_SHIFT);
-	//endÎª×îºóÒ»¸ö×Ö½ÚµÄÏÂÒ»µØÖ·£¬Çë×¢Òâ
+	//endä¸ºæœ€åä¸€ä¸ªå­—èŠ‚çš„ä¸‹ä¸€åœ°å€
 	char* end = start + (newspan->_npage << PAGE_SHIFT);
+	
 	char* cur = start;
 	char* next = cur + bytes;
 	while (next < end)
@@ -38,25 +62,27 @@ Span* CentralCache::GetOneSpan(SpanList* spanlist, size_t bytes)
 	newspan->_objsize = bytes;
 	newspan->_usecount = 0;
 
-	// ½«newspan²åÈëµ½spanlist
+	// å°†newspanæ’å…¥åˆ°spanlist
 	spanlist->PushFront(newspan);
 	return newspan;
 }
 
-// ´ÓÖĞĞÄ»º´æ»ñÈ¡Ò»¶¨ÊıÁ¿µÄ¶ÔÏó¸øthreadcache
+// ä»ä¸­å¿ƒç¼“å­˜è·å–ä¸€å®šæ•°é‡çš„å¯¹è±¡ç»™threadcache
 size_t CentralCache::FetchRangeObj(void*& start, void*& end, size_t num, size_t bytes)
 {
-	//Çó³öÔÚspanÁ´±íÊı×éÖĞµÄÏÂ±ê
+	//æ±‚å‡ºåœ¨spané“¾è¡¨æ•°ç»„ä¸­çš„ä¸‹æ ‡
 	size_t index = ClassSize::Index(bytes);
 	SpanList* spanlist = &_spanlist[index];
 
-	// ¶Ôµ±Ç°Í°½øĞĞ¼ÓËø,¿ÉÄÜ´æÔÚ¶à¸öÏß³ÌÍ¬Ê±À´Í¬Ò»¸öSpanListÀ´»ñÈ¡ÄÚ´æ¶ÔÏó
+	// å¯¹å½“å‰æ¡¶è¿›è¡ŒåŠ é”,å¯èƒ½å­˜åœ¨å¤šä¸ªçº¿ç¨‹åŒæ—¶æ¥åŒä¸€ä¸ªSpanListæ¥è·å–å†…å­˜å¯¹è±¡
 	std::unique_lock<std::mutex> lock(spanlist->_mtx);
 
 	Span* span = GetOneSpan(spanlist, bytes);
 	void* cur = span->_objlist;
-	void* prev = cur;// prev¼ÇÂ¼×îºóÒ»¸öÄÚ´æ¶ÔÏó
+	void* prev = cur;// prevè®°å½•æœ€åä¸€ä¸ªå†…å­˜å¯¹è±¡
 	size_t fetchnum = 0;
+	// å¯èƒ½è¯¥spanä¸­æ²¡æœ‰é‚£ä¹ˆå¤šçš„å†…å­˜å¯¹è±¡
+	// è¿™ç§æƒ…å†µä¸‹æœ‰å¤šå°‘è¿”ç»™å¤šå°‘
 	while (cur != nullptr && fetchnum < num)
 	{
 		prev = cur;
@@ -67,12 +93,13 @@ size_t CentralCache::FetchRangeObj(void*& start, void*& end, size_t num, size_t 
 	start = span->_objlist;
 	end = prev;
 	NEXT_OBJ(end) = nullptr;
-
+        // å°†å‰©ä¸‹æ¥çš„å†…å­˜å¯¹è±¡å†æ¬¡æ¥spançš„objlistä¸Š
 	span->_objlist = cur;
 	span->_usecount += fetchnum;
 
 
-	//µ±Ò»¸öspanÎª¿Õ£¬½«spanÒÆµ½Î²ÉÏ
+	// æ¯æ¬¡å°†spanä¸­çš„å†…å­˜å—æ‹¿å‡ºæ¥çš„æ—¶å€™,åˆ¤æ–­è¿™ä¸ªspanä¸­è¿˜æœ‰æ²¡æœ‰å†…å­˜å—
+	// æ²¡æœ‰å°±æ”¾åˆ°æœ€åï¼Œè¿™æ ·åšå¯ä»¥æé«˜ä¸‹ä¸€æ¬¡çš„æ£€ç´¢æ•ˆç‡
 	if (span->_objlist == nullptr)
 	{
 		spanlist->Erase(span);
@@ -83,38 +110,42 @@ size_t CentralCache::FetchRangeObj(void*& start, void*& end, size_t num, size_t 
 
 void CentralCache::ReleaseListToSpans(void* start, size_t byte)
 {
-	// ÕÒµ½¶ÔÓ¦µÄspanlist
+	// æ‰¾åˆ°å¯¹åº”çš„spanlist
 	size_t index = ClassSize::Index(byte);
 	SpanList* spanlist = &_spanlist[index];
 
-	// CentralCache:¶Ôµ±Ç°Í°½øĞĞ¼ÓËø(Í°Ëø)
-	// PageCache:±ØĞë¶ÔÕû¸öSpanListÈ«¾Ö¼ÓËø
-	// ÒòÎª¿ÉÄÜ´æÔÚ¶à¸öÏß³ÌÍ¬Ê±È¥ÏµÍ³ÉêÇëÄÚ´æµÄÇé¿ö
+	// CentralCache:å¯¹å½“å‰æ¡¶è¿›è¡ŒåŠ é”(æ¡¶é”)
+	// PageCache:å¿…é¡»å¯¹æ•´ä¸ªSpanListå…¨å±€åŠ é”
+	// å› ä¸ºå¯èƒ½å­˜åœ¨å¤šä¸ªçº¿ç¨‹åŒæ—¶å»ç³»ç»Ÿç”³è¯·å†…å­˜çš„æƒ…å†µ
 	std::unique_lock<std::mutex> lock(spanlist->_mtx);
-
+        
+	
+	// éå†starté‚£æ¡ç©ºé—²é“¾è¡¨ï¼Œé‡æ–°è¿åˆ°spançš„_objlistä¸­
 	while (start)
 	{
 		void* next = NEXT_OBJ(start);
-		// »ñÈ¡ÄÚ´æ¶ÔÏóµ½spanµÄÓ³Éä
+		// è·å–å†…å­˜å¯¹è±¡åˆ°spançš„æ˜ å°„
 		Span* span = PageCache::GetInstance()->MapObjectToSpan(start);
 
 
-		//µ±ÊÍ·Å¶ÔÏó»Øµ½¿ÕµÄspan£¬°Ñ¿ÕµÄspanÒÆµ½Í·ÉÏ
+		//å½“é‡Šæ”¾å¯¹è±¡å›åˆ°ç©ºçš„spanï¼ŒæŠŠç©ºçš„spanç§»åˆ°å¤´ä¸Š
 		if (span->_objlist == nullptr)
 		{
 			spanlist->Erase(span);
 			spanlist->PushFront(span);
 		}
 
-		// ½«ÄÚ´æ¶ÔÏó²ÉÓÃÍ·²å¹é»¹¸øCentralCacheµÄspan
+		// å°†å†…å­˜å¯¹è±¡é‡‡ç”¨å¤´æ’å½’è¿˜ç»™CentralCacheçš„span
 		NEXT_OBJ(start) = span->_objlist;
 		span->_objlist = start;
-		// usecount == 0±íÊ¾spanÇĞ³öÈ¥µÄ¶ÔÏó¶¼»¹»ØÀ´ÁË
-		// ÊÍ·Åspan»Øµ½pagecache½øĞĞºÏ²¢
+		// usecount == 0è¡¨ç¤ºspanåˆ‡å‡ºå»çš„å¯¹è±¡éƒ½è¿˜å›æ¥äº†
+		// é‡Šæ”¾spanå›åˆ°pagecacheè¿›è¡Œåˆå¹¶
 		if (--span->_usecount == 0)
 		{
 			spanlist->Erase(span);
-
+                        
+			// å°†ä¸€ä¸ªspanä»CentralCacheå½’è¿˜åˆ°PageCacheçš„æ—¶å€™åªéœ€è¦é¡µå·å’Œé¡µæ•°
+			// ä¸éœ€è¦å…¶ä»–çš„ä¸œè¥¿æ‰€ä»¥å¯¹äºå…¶ä»–çš„æ•°æ®è¿›è¡Œèµ‹ç©º
 			span->_objlist = nullptr;
 			span->_objsize = 0;
 			span->_prev = nullptr;
