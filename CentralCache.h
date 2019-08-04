@@ -1,3 +1,10 @@
+//CentralCacheå±‚åªæœ‰ä¸€ä¸ªï¼Œå®ƒæ˜¯ä¸€ä¸ªä¸­å¿ƒç¼“å­˜ï¼Œè¿›è¡Œèµ„æºçš„å‡è¡¡ï¼Œå½“ThreadCacheæ²¡æœ‰æ—¶å¯ä»¥å‘CentralCacheç”³è¯·ï¼Œå¹¶ä¸”å¯¹äºThreadCacheçš„æŸä¸ªèµ„æºè¿‡å‰©çš„æ—¶å€™ï¼Œå¯ä»¥å›æ”¶ThreadCacheå†…éƒ¨çš„çš„å†…å­˜
+
+
+
+
+
+
 #ifndef __CENTRAL_CACHE_H__
 #define __CENTRAL_CACHE_H__
 
@@ -5,7 +12,7 @@
 #include "Common.h"
 
 
-//Ê¹ÓÃ¶öººÄ£Ê½
+//ä½¿ç”¨é¥¿æ±‰æ¨¡å¼
 class CentralCache
 {
 public:
@@ -15,17 +22,17 @@ public:
 
 	Span* GetOneSpan(SpanList* spanlist, size_t bytes);
 
-	// ´ÓÖĞĞÄ»º´æ»ñÈ¡Ò»¶¨ÊıÁ¿µÄ¶ÔÏó¸øthread cache
+	// ä»ä¸­å¿ƒç¼“å­˜è·å–ä¸€å®šæ•°é‡çš„å¯¹è±¡ç»™thread cache
 	size_t FetchRangeObj(void*& start, void*& end, size_t num, size_t byte);
 
-	// ½«Ò»¶¨ÊıÁ¿µÄ¶ÔÏóÊÍ·Åµ½span¿ç¶È
+	// å°†ä¸€å®šæ•°é‡çš„å¯¹è±¡é‡Šæ”¾åˆ°spanè·¨åº¦
 	void ReleaseListToSpans(void* start, size_t byte_size);
 private:
-	// ÖĞĞÄ»º´æ×ÔÓÉÁ´±í
+	// ä¸­å¿ƒç¼“å­˜è‡ªç”±é“¾è¡¨
 	SpanList _spanlist[NLISTS];
 private:
-	CentralCache() = default;//default¿ÉÒÔÉú³ÉÄ¬ÈÏµÄ
-	CentralCache(const CentralCache&) = delete;//delect²»»áÉú³É
+	CentralCache() = default;//defaultå¯ä»¥ç”Ÿæˆé»˜è®¤çš„
+	CentralCache(const CentralCache&) = delete;//delectä¸ä¼šç”Ÿæˆ
 	CentralCache& operator=(const CentralCache&) = delete;
 
 	static CentralCache _inst;
