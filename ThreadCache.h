@@ -7,26 +7,31 @@
 class ThreadCache
 {
 public:
+	//åˆ†é…å†…å­˜
 	void* Allocate(size_t size);
+	
+	//é‡Šæ”¾å†…å­˜
 	void Deallocate(void* ptr, size_t size);
 
-	// ´ÓÖĞĞÄ»º´æ»ñÈ¡¶ÔÏó
+	// ä»ä¸­å¿ƒç¼“å­˜è·å–å¯¹è±¡
 	void* FetchFromCentralCache(size_t index, size_t size);
-	// Á´±íÖĞ¶ÔÏóÌ«¶à£¬¿ªÊ¼»ØÊÕ¡£
+	
+	// é“¾è¡¨ä¸­å¯¹è±¡å¤ªå¤šï¼Œå¼€å§‹å›æ”¶ã€‚
 	void ListTooLong(FreeList* freelist, size_t byte);
 private:
+	//åˆ›å»ºä¸€ä¸ªè‡ªç”±é“¾è¡¨æ•°æ®ï¼Œé•¿åº¦NLISTSæ˜¯240ï¼Œé•¿åº¦æ˜¯æ ¹æ®å¯¹é½è§„åˆ™å¾—æ¥çš„
 	FreeList _freelist[NLISTS];
 };
 
-//ÔõÃ´ÈÃÃ¿¸öÏß³Ì¶¼ÓĞ×Ô¼ºµÄÒ»¸öÏß³Ì»º´æ
-//·½·¨Ò»£º
-//Ê¹ÓÃThreadCache* list;È«¾Ö±äÁ¿½«ËùÓĞµÄThreadCache¶ÔÏóÁ´½ÓÆğÀ´¡£
-//Ã¿¸ö¶ÔÏó´ætid£¨int _tid£©¼°ÏÂÒ»¶ÔÏóµÄÖ¸Õë£¨ThreadCache* _next£©¡£
-//µ«»ñÈ¡ThreadCache¶ÔÏóĞèÒª¼ÓËø¡£
+//æ€ä¹ˆè®©æ¯ä¸ªçº¿ç¨‹éƒ½æœ‰è‡ªå·±çš„ä¸€ä¸ªçº¿ç¨‹ç¼“å­˜
+//æ–¹æ³•ä¸€ï¼š
+//ä½¿ç”¨ThreadCache* list;å…¨å±€å˜é‡å°†æ‰€æœ‰çš„ThreadCacheå¯¹è±¡é“¾æ¥èµ·æ¥ã€‚
+//æ¯ä¸ªå¯¹è±¡å­˜tidï¼ˆint _tidï¼‰åŠä¸‹ä¸€å¯¹è±¡çš„æŒ‡é’ˆï¼ˆThreadCache* _nextï¼‰ã€‚
+//ä½†è·å–ThreadCacheå¯¹è±¡éœ€è¦åŠ é”ã€‚
 
-//·½·¨¶ş£º
-//Ê¹ÓÃTLS¼¼Êõ(Thread Local Storage)Ïß³Ì±¾µØ´æ´¢ 
-//¶¨ÒåÁËÒ»¸ö¾²Ì¬µÄTLS±äÁ¿£¬Õâ¸ö±äÁ¿Ã¿¸öÏß³Ì¶¼ÓĞÒ»¸ö
+//æ–¹æ³•äºŒï¼š
+//ä½¿ç”¨TLSæŠ€æœ¯(Thread Local Storage)çº¿ç¨‹æœ¬åœ°å­˜å‚¨ 
+//å®šä¹‰äº†ä¸€ä¸ªé™æ€çš„TLSå˜é‡ï¼Œè¿™ä¸ªå˜é‡æ¯ä¸ªçº¿ç¨‹éƒ½æœ‰ä¸€ä¸ª
 static _declspec(thread) ThreadCache* tls_threadcache = nullptr;
 
 
