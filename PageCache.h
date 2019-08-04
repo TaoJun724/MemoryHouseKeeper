@@ -4,7 +4,7 @@
 #include "Common.h"
 
 
-//����ģʽ
+//饿汉模式
 class PageCache
 {
 public:
@@ -13,15 +13,18 @@ public:
 		return &_inst;
 	}
 
+	//从系统申请span或者大于要申请的npage的Pagespan中申请
 	Span* NewSpan(size_t npage);
 	Span* _NewSpan(size_t npage);
 
-	// ��ȡ�Ӷ���span��ӳ��
+	// 获取从对象到span的映射
 	Span* MapObjectToSpan(void* obj);
-	// �ͷſ���span�ص�Pagecache�����ϲ����ڵ�span
+
+	// 释放空闲span回到Pagecache，并合并相邻的span
 	void ReleaseSpanToPageCahce(Span* span);
 
 private:
+	//NPAGES是129，但是使用128个数据元素，也就是下标从1开始到128分别为1页到128页
 	SpanList _pagelist[NPAGES];
 private:
 	PageCache() = default;
